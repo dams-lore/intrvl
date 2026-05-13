@@ -14,9 +14,9 @@ const C = {
 };
 
 const FORMAT_CONFIG: Record<WorkoutFormat, { label: string; color: string; icon: string; desc: string }> = {
-  for_time:  { label: 'For Time',  color: C.accent, icon: '⏱', desc: 'Séquence linéaire — mesure le temps total' },
-  amrap:     { label: 'AMRAP',     color: C.green,  icon: '🔄', desc: 'Max rounds en un temps fixe' },
-  intervals: { label: 'Intervals', color: C.blue,   icon: '🔁', desc: 'Répéter N rounds work / rest' },
+  for_time:  { label: 'For Time',  color: C.accent, icon: '⏱', desc: 'Linear sequence — measure total time' },
+  amrap:     { label: 'AMRAP',     color: C.green,  icon: '🔄', desc: 'Max rounds in a fixed time cap' },
+  intervals: { label: 'Intervals', color: C.blue,   icon: '🔁', desc: 'Repeat N rounds work / rest' },
 };
 
 function Stepper({ value, onChange, min = 1, max = 999 }: {
@@ -88,9 +88,9 @@ export default function NewWorkoutScreen() {
   }
 
   function handleAddBlock() {
-    if (!bMove.trim()) { setBlockError('Le nom du mouvement est obligatoire'); return; }
+    if (!bMove.trim()) { setBlockError('Movement name is required'); return; }
     const num = parseFloat(bVal);
-    if (!bVal || isNaN(num) || num <= 0) { setBlockError('Entre une valeur valide'); return; }
+    if (!bVal || isNaN(num) || num <= 0) { setBlockError('Enter a valid value'); return; }
     const block: Step = {
       id: generateId(), type: bType, movement: bMove.trim(), value: num,
       ...(bType !== 'reps' ? { unit: bUnit as any } : {}),
@@ -106,9 +106,9 @@ export default function NewWorkoutScreen() {
   }
 
   function handleDeleteBlock(id: string) {
-    Alert.alert('Supprimer ce bloc ?', '', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => setBlocks((p) => p.filter((b) => b.id !== id)) },
+    Alert.alert('Delete this block?', '', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => setBlocks((p) => p.filter((b) => b.id !== id)) },
     ]);
   }
 
@@ -127,15 +127,15 @@ export default function NewWorkoutScreen() {
   }
 
   function handleNextFromStep2() {
-    if (!name.trim()) { setNameError('Le nom est obligatoire'); return; }
+    if (!name.trim()) { setNameError('Name is required'); return; }
     setNameError('');
     setStep(3);
   }
 
   function handleSave() {
-    if (blocks.length === 0) { Alert.alert('Aucun bloc', 'Ajoute au moins un bloc avant de sauvegarder.'); return; }
+    if (blocks.length === 0) { Alert.alert('No blocks', 'Add at least one block before saving.'); return; }
     const payload = {
-      name: name.trim() || 'Workout sans nom', format, steps: blocks,
+      name: name.trim() || 'Untitled workout', format, steps: blocks,
       ...(format === 'amrap' ? { cap_time: capTimeMin * 60 } : {}),
       ...(format === 'intervals' ? { rounds } : {}),
     };
@@ -157,8 +157,8 @@ export default function NewWorkoutScreen() {
           <TouchableOpacity onPress={handleBack} style={s.backTap}><Text style={s.backText}>← Back</Text></TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={s.content}>
-          <Text style={s.stepTitle}>Nouveau workout</Text>
-          <Text style={s.stepSub}>Choisis un format</Text>
+          <Text style={s.stepTitle}>New workout</Text>
+          <Text style={s.stepSub}>Choose a format</Text>
           <View style={{ marginTop: 24 }}>
             {(Object.entries(FORMAT_CONFIG) as [WorkoutFormat, (typeof FORMAT_CONFIG)[WorkoutFormat]][]).map(([key, cfg]) => (
               <TouchableOpacity key={key} style={[s.fmtCard, { borderColor: cfg.color, borderWidth: 2 }]}
@@ -189,10 +189,10 @@ export default function NewWorkoutScreen() {
             <View style={[s.pill, { backgroundColor: cfg.color + '25' }]}>
               <Text style={[s.pillText, { color: cfg.color }]}>{cfg.icon}  {cfg.label}</Text>
             </View>
-            <Text style={s.stepTitle}>Nomme ton workout</Text>
+            <Text style={s.stepTitle}>Name your workout</Text>
             <View style={s.fieldGroup}>
-              <Text style={s.label}>NOM DU WORKOUT</Text>
-              <TextInput style={[s.input, nameError ? s.inputError : null]} placeholder="ex. MADX Stamina, Annie, Fran…"
+              <Text style={s.label}>WORKOUT NAME</Text>
+              <TextInput style={[s.input, nameError ? s.inputError : null]} placeholder="e.g. MADX Stamina, Annie, Fran…"
                 placeholderTextColor={C.muted} value={name}
                 onChangeText={(t) => { setName(t); if (t.trim()) setNameError(''); }}
                 autoFocus returnKeyType="done" onSubmitEditing={handleNextFromStep2} />
@@ -206,12 +206,12 @@ export default function NewWorkoutScreen() {
             )}
             {format === 'intervals' && (
               <View style={s.fieldGroup}>
-                <Text style={s.label}>NOMBRE DE ROUNDS</Text>
+                <Text style={s.label}>NUMBER OF ROUNDS</Text>
                 <Stepper value={rounds} onChange={setRounds} min={1} max={99} />
               </View>
             )}
             <TouchableOpacity style={s.primaryBtn} onPress={handleNextFromStep2} activeOpacity={0.85}>
-              <Text style={s.primaryBtnText}>Ajouter les blocs  →</Text>
+              <Text style={s.primaryBtnText}>Add blocks  →</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -225,7 +225,7 @@ export default function NewWorkoutScreen() {
       <View style={s.topBar}>
         <TouchableOpacity onPress={handleBack} style={s.backTap}><Text style={s.backText}>← Back</Text></TouchableOpacity>
         <TouchableOpacity style={[s.saveBtn, blocks.length === 0 && s.saveBtnDisabled]} onPress={handleSave} activeOpacity={0.85}>
-          <Text style={s.saveBtnText}>{editId ? 'Mettre à jour' : 'Sauvegarder'}</Text>
+          <Text style={s.saveBtnText}>{editId ? 'Update' : 'Save'}</Text>
         </TouchableOpacity>
       </View>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -233,12 +233,12 @@ export default function NewWorkoutScreen() {
           <View style={[s.pill, { backgroundColor: cfg.color + '25' }]}>
             <Text style={[s.pillText, { color: cfg.color }]}>{cfg.icon}  {cfg.label}</Text>
           </View>
-          <Text style={s.stepTitle}>{name || 'Mon workout'}</Text>
-          {format === 'amrap' && <Text style={s.stepSub}>Cap : {capTimeMin} min</Text>}
+          <Text style={s.stepTitle}>{name || 'My workout'}</Text>
+          {format === 'amrap' && <Text style={s.stepSub}>Cap: {capTimeMin} min</Text>}
           {format === 'intervals' && <Text style={s.stepSub}>{rounds} rounds</Text>}
 
-          <Text style={[s.label, { marginTop: 28, marginBottom: 8 }]}>BLOCS {blocks.length > 0 ? `(${blocks.length})` : ''}</Text>
-          {blocks.length === 0 && !showBlockForm && <Text style={s.emptyBlocks}>Aucun bloc. Ajoute le premier ci-dessous.</Text>}
+          <Text style={[s.label, { marginTop: 28, marginBottom: 8 }]}>BLOCKS {blocks.length > 0 ? `(${blocks.length})` : ''}</Text>
+          {blocks.length === 0 && !showBlockForm && <Text style={s.emptyBlocks}>No blocks yet. Add your first one below.</Text>}
 
           {blocks.map((b, i) => (
             <View key={b.id} style={s.blockRow}>
@@ -266,7 +266,7 @@ export default function NewWorkoutScreen() {
 
           {showBlockForm ? (
             <View style={s.blockForm}>
-              <Text style={s.blockFormTitle}>Nouveau bloc</Text>
+              <Text style={s.blockFormTitle}>New block</Text>
               <Text style={s.label}>TYPE</Text>
               <View style={s.segRow}>
                 {(['reps', 'distance', 'time'] as StepType[]).map((t) => (
@@ -278,13 +278,13 @@ export default function NewWorkoutScreen() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.label}>{bType === 'reps' ? 'REPS' : bType === 'distance' ? 'DISTANCE' : 'DURÉE'}</Text>
+                  <Text style={s.label}>{bType === 'reps' ? 'REPS' : bType === 'distance' ? 'DISTANCE' : 'DURATION'}</Text>
                   <TextInput style={[s.input, { textAlign: 'center', fontSize: 20 }]} placeholder="0"
                     placeholderTextColor={C.muted} value={bVal} onChangeText={setBVal} keyboardType="decimal-pad" />
                 </View>
                 {bType !== 'reps' && (
                   <View style={{ marginLeft: 12 }}>
-                    <Text style={s.label}>UNITÉ</Text>
+                    <Text style={s.label}>UNIT</Text>
                     <View style={s.segRow}>
                       {(bType === 'distance' ? ['m', 'km', 'mi'] : ['s', 'min']).map((u) => (
                         <TouchableOpacity key={u} style={[s.seg, { minWidth: 50 }, bUnit === u && s.segActive]} onPress={() => setBUnit(u)}>
@@ -295,22 +295,22 @@ export default function NewWorkoutScreen() {
                   </View>
                 )}
               </View>
-              <Text style={[s.label, { marginTop: 12 }]}>MOUVEMENT / EXERCICE</Text>
-              <TextInput style={s.input} placeholder="ex. Run, Toes to Bar, Row…" placeholderTextColor={C.muted}
+              <Text style={[s.label, { marginTop: 12 }]}>MOVEMENT / EXERCISE</Text>
+              <TextInput style={s.input} placeholder="e.g. Run, Toes to Bar, Row…" placeholderTextColor={C.muted}
                 value={bMove} onChangeText={setBMove} returnKeyType="done" />
               {blockError ? <Text style={s.errText}>{blockError}</Text> : null}
               <TouchableOpacity style={s.advToggle} onPress={() => setShowAdvanced(!showAdvanced)}>
-                <Text style={s.advToggleText}>{showAdvanced ? '▲  Masquer les paramètres avancés' : '▼  Paramètres avancés'}</Text>
+                <Text style={s.advToggleText}>{showAdvanced ? '▲  Hide advanced settings' : '▼  Advanced settings'}</Text>
               </TouchableOpacity>
               {showAdvanced && (
                 <View style={s.advSection}>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.label}>POIDS</Text>
+                      <Text style={s.label}>WEIGHT</Text>
                       <TextInput style={s.input} placeholder="0" placeholderTextColor={C.muted} value={bWeight} onChangeText={setBWeight} keyboardType="decimal-pad" />
                     </View>
                     <View style={{ marginLeft: 12 }}>
-                      <Text style={s.label}>UNITÉ</Text>
+                      <Text style={s.label}>UNIT</Text>
                       <View style={s.segRow}>
                         {(['kg', 'lb'] as const).map((u) => (
                           <TouchableOpacity key={u} style={[s.seg, { minWidth: 50 }, bWeightUnit === u && s.segActive]} onPress={() => setBWeightUnit(u)}>
@@ -320,29 +320,29 @@ export default function NewWorkoutScreen() {
                       </View>
                     </View>
                   </View>
-                  <Text style={[s.label, { marginTop: 12 }]}>HAUTEUR (CM)</Text>
-                  <TextInput style={s.input} placeholder="ex. 50" placeholderTextColor={C.muted} value={bHeight} onChangeText={setBHeight} keyboardType="decimal-pad" />
+                  <Text style={[s.label, { marginTop: 12 }]}>HEIGHT (CM)</Text>
+                  <TextInput style={s.input} placeholder="e.g. 50" placeholderTextColor={C.muted} value={bHeight} onChangeText={setBHeight} keyboardType="decimal-pad" />
                   <Text style={[s.label, { marginTop: 12 }]}>TARGET PACE</Text>
-                  <TextInput style={s.input} placeholder="ex. 3k · 5k · 4:30 min/km" placeholderTextColor={C.muted} value={bPace} onChangeText={setBPace} />
-                  <Text style={[s.label, { marginTop: 12 }]}>TARGET HR (BPM OU %)</Text>
-                  <TextInput style={s.input} placeholder="ex. 160" placeholderTextColor={C.muted} value={bHr} onChangeText={setBHr} keyboardType="decimal-pad" />
+                  <TextInput style={s.input} placeholder="e.g. 3k · 5k · 4:30 min/km" placeholderTextColor={C.muted} value={bPace} onChangeText={setBPace} />
+                  <Text style={[s.label, { marginTop: 12 }]}>TARGET HR (BPM OR %)</Text>
+                  <TextInput style={s.input} placeholder="e.g. 160" placeholderTextColor={C.muted} value={bHr} onChangeText={setBHr} keyboardType="decimal-pad" />
                   <Text style={[s.label, { marginTop: 12 }]}>NOTES</Text>
-                  <TextInput style={[s.input, { height: 80, textAlignVertical: 'top' }]} placeholder="Texte libre…"
+                  <TextInput style={[s.input, { height: 80, textAlignVertical: 'top' }]} placeholder="Free text…"
                     placeholderTextColor={C.muted} value={bNotes} onChangeText={setBNotes} multiline />
                 </View>
               )}
               <View style={s.formActions}>
                 <TouchableOpacity style={s.cancelBtn} onPress={() => { resetBlockForm(); setShowBlockForm(false); }}>
-                  <Text style={s.cancelText}>Annuler</Text>
+                  <Text style={s.cancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.primaryBtn, { flex: 1, marginLeft: 10 }]} onPress={handleAddBlock}>
-                  <Text style={s.primaryBtnText}>Ajouter le bloc</Text>
+                  <Text style={s.primaryBtnText}>Add block</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <TouchableOpacity style={s.addBlockBtn} onPress={() => setShowBlockForm(true)} activeOpacity={0.8}>
-              <Text style={s.addBlockBtnText}>+  Ajouter un bloc</Text>
+              <Text style={s.addBlockBtnText}>+  Add a block</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
