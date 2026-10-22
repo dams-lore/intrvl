@@ -628,7 +628,7 @@ const s = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.4)' },
   dividerText: { fontSize: 12, color: 'rgba(80,40,60,0.45)', fontFamily: MR },
   importOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(240,196,160,0.95)',
     zIndex: 99, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40,
   },
