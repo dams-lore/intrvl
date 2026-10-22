@@ -16,8 +16,10 @@ import Svg, { Circle, Text as SvgText, TSpan } from 'react-native-svg';
 import { useWorkoutStore } from '../../../store/workoutStore';
 import { useSessionStore } from '../../../store/sessionStore';
 import { useRecordsStore } from '../../../store/recordsStore';
+import { useHeartRateStore } from '../../../store/heartRateStore';
 import { Step } from '../../../types/workout';
 import { BlockResult } from '../../../types/session';
+import { isMovingActivity } from '../../../utils/isMovingActivity';
 
 // ── SVG constants ──────────────────────────────────────────────────────────
 const C_RADIUS      = 118;
@@ -88,6 +90,7 @@ export default function RunScreen() {
   const { getById }           = useWorkoutStore();
   const { setPendingSession } = useSessionStore();
   const { getPaceForLabel }   = useRecordsStore();
+  const { bpm }               = useHeartRateStore();
   const workout               = getById(id ?? '');
 
   const totalBlocks = workout?.steps.length ?? 0;
@@ -192,29 +195,45 @@ export default function RunScreen() {
   const [completedBlocks, setCompletedBlocks] = useState<CompletedBlock[]>([]);
 
   // ── GPS Speed ──────────────────────────────────────────────────────────────
-  const [gpsSpeed, setGpsSpeed]     = useState<number | null>(null); // km/h
-  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+  const [gpsSpeed, setGpsSpeed]   = useState<number | null>(null); // km/h
+  const [gpsPermGranted, setGpsPermGranted] = useState(false);
 
+  // Demande de permission une seule fois au montage
   useEffect(() => {
+    let mounted = true;
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (mounted && status === 'granted') setGpsPermGranted(true);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // Démarre/arrête le suivi GPS en fonction du mouvement courant
+  useEffect(() => {
+    if (!gpsPermGranted) return;
+    const movement = workout?.steps[run.current.blockIndex]?.movement ?? '';
+    if (!isMovingActivity(movement)) {
+      setGpsSpeed(null);
+      return;
+    }
     let active = true;
+    let sub: Location.LocationSubscription | null = null;
     (async () => {
-      const { status: perm } = await Location.requestForegroundPermissionsAsync();
-      if (perm !== 'granted') return;
-      locationSubRef.current = await Location.watchPositionAsync(
+      sub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 1 },
         (loc) => {
           if (!active) return;
           const spd = loc.coords.speed ?? 0;
-          // speed en m/s → km/h, filtre les valeurs négatives (GPS non lock)
           setGpsSpeed(spd > 0 ? Math.round(spd * 3.6 * 10) / 10 : 0);
         }
       );
     })();
     return () => {
       active = false;
-      locationSubRef.current?.remove();
+      sub?.remove();
+      setGpsSpeed(null);
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gpsPermGranted, completedBlocks]);
   const [, setTick] = useState(0);
   const rerender = () => setTick((t) => t + 1);
 
@@ -438,6 +457,7 @@ export default function RunScreen() {
   const movLen        = currentStep?.movement?.length ?? 0;
   const movFontSize    = movLen <= 12 ? 44 : movLen <= 20 ? 34 : 26;
   const gymMovFontSize = movLen <= 12 ? 32 : movLen <= 20 ? 26 : 20;
+  const showGps       = isMovingActivity(currentStep?.movement ?? '');
 
   let mainTimer: number;
   let timerLabel: string;
@@ -544,14 +564,18 @@ export default function RunScreen() {
           <Text style={s.gymTimer} numberOfLines={1} adjustsFontSizeToFit>
             {fmt(gymMainTimer)}
           </Text>
-          {/* GPS Speed — affiché sous le chrono */}
-          {gpsSpeed !== null && (
-            <View style={sGps.row}>
-              <Text style={sGps.speed}>{gpsSpeed} km/h</Text>
-              <Text style={sGps.sep}>·</Text>
-              <Text style={sGps.pace}>{speedToPace(gpsSpeed)}</Text>
-            </View>
-          )}
+          {/* GPS Speed — seulement pour activités de déplacement */}
+          <View style={s.gpsSlotGym}>
+            {showGps && gpsSpeed !== null && (
+              <View style={sGps.row}>
+                <Text style={sGps.speed}>{gpsSpeed} km/h</Text>
+                <Text style={sGps.sep}>·</Text>
+                <Text style={sGps.pace}>{speedToPace(gpsSpeed)}</Text>
+              </View>
+            )}
+          </View>
+          {/* Fréquence cardiaque */}
+          <Text style={s.hrTextGym}>♥  {bpm !== null ? `${bpm} bpm` : '-- bpm'}</Text>
           {status === 'paused' && <Text style={s.gymPausedBadge}>PAUSED</Text>}
         </View>
 
@@ -747,14 +771,18 @@ export default function RunScreen() {
 
         {status === 'paused' && <Text style={s.pausedBadge}>PAUSED</Text>}
 
-        {/* GPS Speed compact */}
-        {gpsSpeed !== null && (
-          <View style={sGps.rowCompact}>
-            <Text style={sGps.speedCompact}>{gpsSpeed} km/h</Text>
-            <Text style={sGps.sepCompact}>·</Text>
-            <Text style={sGps.paceCompact}>{speedToPace(gpsSpeed)}</Text>
-          </View>
-        )}
+        {/* GPS Speed compact — seulement pour activités de déplacement */}
+        <View style={s.gpsSlot}>
+          {showGps && gpsSpeed !== null && (
+            <View style={sGps.rowCompact}>
+              <Text style={sGps.speedCompact}>{gpsSpeed} km/h</Text>
+              <Text style={sGps.sepCompact}>·</Text>
+              <Text style={sGps.paceCompact}>{speedToPace(gpsSpeed)}</Text>
+            </View>
+          )}
+        </View>
+        {/* Fréquence cardiaque */}
+        <Text style={s.hrText}>♥  {bpm !== null ? `${bpm} bpm` : '-- bpm'}</Text>
 
         <Text style={s.prevBlock}>{prevText}</Text>
       </View>
@@ -858,6 +886,11 @@ const s = StyleSheet.create({
 
   pausedBadge: { fontSize: 12, fontWeight: '700', color: PURPLE, letterSpacing: 3, marginTop: 6, fontFamily: 'Inter_700Bold' },
   prevBlock:   { fontSize: 13, color: MUTED, fontWeight: '500', marginTop: 8, fontFamily: 'Inter_400Regular' },
+
+  gpsSlot:    { height: 36, justifyContent: 'center' as const, alignItems: 'center' as const },
+  gpsSlotGym: { height: 50, justifyContent: 'center' as const, alignItems: 'center' as const },
+  hrText:     { fontSize: 16, fontWeight: '600', color: PURPLE, marginTop: 4, fontFamily: 'Inter_700Bold' },
+  hrTextGym:  { fontSize: 22, fontWeight: '700', color: 'rgba(0,0,0,0.45)', marginTop: 4, fontFamily: 'Inter_700Bold' },
 
   progressRow:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 10, gap: 12 },
   progressTrack: { flex: 1, height: 6, backgroundColor: '#FFFFFF1A', borderRadius: 3, overflow: 'hidden' },
