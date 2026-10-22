@@ -1,95 +1,121 @@
-import React from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useWorkoutStore } from '../../../store/workoutStore';
-import { Workout, WorkoutFormat } from '../../../types/workout';
+import { useSessionStore } from '../../../store/sessionStore';
 
-const FORMAT_CONFIG: Record<WorkoutFormat, { label: string; color: string; icon: string }> = {
-  for_time: { label: 'For Time', color: '#A793AC', icon: '⏱' },
-  amrap:    { label: 'AMRAP',    color: '#7DB87A', icon: '🔄' },
-  intervals:{ label: 'Intervals',color: '#5B8DB8', icon: '🔁' },
-};
+const GRAD: [string,string,string,string] = ['#f0c4a0','#e8b8c8','#d4b8e0','#c8c0e8'];
+const DARK = '#2a1a24';
+const MF = 'Manrope_700Bold';
+const MR = 'Manrope_400Regular';
+const MS = 'Manrope_600SemiBold';
+const MB = 'Manrope_800ExtraBold';
 
-function WorkoutCard({ workout, onPress }: { workout: Workout; onPress: () => void }) {
-  const fmt = FORMAT_CONFIG[workout.format];
-  const date = new Date(workout.created_at).toLocaleDateString('fr-FR', {
-    day: 'numeric', month: 'short',
-  });
-  return (
-    <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={s.cardHeader}>
-        <Text style={s.cardName} numberOfLines={1}>{workout.name}</Text>
-        <View style={[s.badge, { backgroundColor: fmt.color + '25', borderColor: fmt.color }]}>
-          <Text style={[s.badgeText, { color: fmt.color }]}>{fmt.icon} {fmt.label}</Text>
-        </View>
-      </View>
-      <View style={s.cardMeta}>
-        <Text style={s.cardMetaText}>{workout.steps.length} blocs</Text>
-        {workout.rounds != null && <Text style={s.cardMetaText}>  ·  {workout.rounds} rounds</Text>}
-        {workout.cap_time != null && <Text style={s.cardMetaText}>  ·  {workout.cap_time / 60} min</Text>}
-        {workout.sport && <Text style={s.cardMetaText}>  ·  {workout.sport}</Text>}
-        <Text style={[s.cardMetaText, { marginLeft: 'auto' as any }]}>{date}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
+const FORMAT_LABEL: Record<string,string> = { for_time:'For Time', amrap:'AMRAP', intervals:'Intervals' };
+const FORMAT_COLOR: Record<string,string> = { for_time:'#7050a0', amrap:'#5a9e57', intervals:'#3a6a94' };
+const g = (a: string) => `rgba(80,40,60,${a})`;
 
 export default function ActivitiesScreen() {
   const router = useRouter();
-  const workouts = useWorkoutStore((state) => state.workouts);
+  const { workouts, deleteWorkout } = useWorkoutStore();
+  const { sessions } = useSessionStore();
+  const [search, setSearch] = useState('');
+
+  const filtered = workouts.filter(w =>
+    w.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function sessionCount(workoutId: string) {
+    return sessions.filter(s => s.workoutId === workoutId).length;
+  }
+
   return (
-    <SafeAreaView style={s.container}>
-      <View style={s.header}>
-        <Text style={s.title}>Activities</Text>
-        <Text style={s.subtitle}>{workouts.length} workout{workouts.length !== 1 ? 's' : ''}</Text>
-      </View>
-      {workouts.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyTitle}>No workouts yet</Text>
-          <Text style={s.emptySubtitle}>Tap + to create your first one.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={workouts}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={s.list}
-          renderItem={({ item }) => (
-            <WorkoutCard workout={item} onPress={() => router.push(`/activities/${item.id}`)} />
+    <LinearGradient colors={GRAD} locations={[0,0.33,0.66,1]} style={s.root}>
+      <SafeAreaView style={{flex:1}} edges={['top']}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+          {/* Header */}
+          <View style={s.header}>
+            <Text style={s.title}>Activities</Text>
+            <TouchableOpacity style={s.newBtn} onPress={() => router.push('/activities/new')} activeOpacity={0.85}>
+              <Text style={s.newBtnText}>+ New</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search */}
+          <View style={s.searchWrap}>
+            <TextInput
+              style={s.search}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search workouts…"
+              placeholderTextColor={g('0.35')}
+            />
+          </View>
+
+          {/* List */}
+          {filtered.length === 0 ? (
+            <View style={s.empty}>
+              <Text style={{fontSize:40,marginBottom:12}}>🏋️</Text>
+              <Text style={[s.emptyTitle]}>No workouts yet</Text>
+              <Text style={s.emptySub}>Create your first workout above</Text>
+            </View>
+          ) : (
+            filtered.map((w) => {
+              const color = FORMAT_COLOR[w.format] ?? '#7050a0';
+              const count = sessionCount(w.id);
+              return (
+                <TouchableOpacity key={w.id} style={s.card}
+                  onPress={() => router.push(`/activities/${w.id}`)} activeOpacity={0.82}>
+                  <View style={[s.cardAccent, {backgroundColor:color}]} />
+                  <View style={s.cardBody}>
+                    <View style={s.cardTop}>
+                      <Text style={s.cardName} numberOfLines={1}>{w.name}</Text>
+                      <View style={[s.badge,{backgroundColor:color+'25',borderColor:color+'40'}]}>
+                        <Text style={[s.badgeText,{color}]}>{FORMAT_LABEL[w.format]??w.format}</Text>
+                      </View>
+                    </View>
+                    <View style={s.cardMeta}>
+                      <Text style={s.metaItem}>{w.steps.length} blocs</Text>
+                      {w.rounds && <Text style={s.metaItem}>· {w.rounds} rounds</Text>}
+                      {w.cap_time && <Text style={s.metaItem}>· {Math.floor(w.cap_time/60)}'{String(w.cap_time%60).padStart(2,'0')} cap</Text>}
+                      {count > 0 && <Text style={[s.metaItem,{color}]}>· {count} session{count>1?'s':''}</Text>}
+                    </View>
+                  </View>
+                  <Text style={s.arrow}>›</Text>
+                </TouchableOpacity>
+              );
+            })
           )}
-        />
-      )}
-      <TouchableOpacity style={s.fab} onPress={() => router.push('/activities/new')} activeOpacity={0.85}>
-        <Text style={s.fabText}>+</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+          <View style={{height:100}} />
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0EFEB' },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  title: { fontSize: 28, fontWeight: '700', color: '#1A1714' },
-  subtitle: { fontSize: 14, color: '#6B6560', marginTop: 2 },
-  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 },
-  card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 10,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  cardName: { fontSize: 17, fontWeight: '600', color: '#1A1714', flex: 1, marginRight: 8 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  cardMetaText: { fontSize: 13, color: '#6B6560' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1A1714', marginBottom: 6 },
-  emptySubtitle: { fontSize: 15, color: '#6B6560' },
-  fab: {
-    position: 'absolute', bottom: 32, right: 20, width: 62, height: 62, borderRadius: 31,
-    backgroundColor: '#7DB87A', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 6, elevation: 6,
-  },
-  fabText: { fontSize: 32, color: '#FFF', lineHeight: 36, fontWeight: '300' },
+  root: {flex:1},
+  scroll: {paddingHorizontal:20,paddingBottom:20,flexGrow:1},
+  header: {flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:16,marginBottom:16},
+  title: {fontSize:34,fontWeight:'800',color:DARK,letterSpacing:-1.5,fontFamily:MB},
+  newBtn: {backgroundColor:'rgba(112,80,160,0.65)',borderRadius:20,paddingHorizontal:16,paddingVertical:9,borderWidth:1,borderColor:'rgba(255,255,255,0.4)'},
+  newBtnText: {color:'#fff',fontSize:14,fontWeight:'700',fontFamily:MF},
+  searchWrap: {backgroundColor:'rgba(255,255,255,0.35)',borderRadius:16,borderWidth:1,borderColor:'rgba(255,255,255,0.5)',marginBottom:16,paddingHorizontal:14},
+  search: {height:44,fontSize:14,color:DARK,fontFamily:MR},
+  empty: {alignItems:'center',paddingTop:60},
+  emptyTitle: {fontSize:18,fontWeight:'700',color:DARK,fontFamily:MF,marginBottom:6},
+  emptySub: {fontSize:14,color:g('0.45'),fontFamily:MR},
+  card: {backgroundColor:'rgba(255,255,255,0.35)',borderWidth:1,borderColor:'rgba(255,255,255,0.55)',borderRadius:20,flexDirection:'row',alignItems:'center',marginBottom:10,overflow:'hidden'},
+  cardAccent: {width:4,alignSelf:'stretch'},
+  cardBody: {flex:1,padding:14},
+  cardTop: {flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:6},
+  cardName: {fontSize:15,fontWeight:'700',color:DARK,flex:1,marginRight:8,fontFamily:MF},
+  badge: {paddingHorizontal:9,paddingVertical:3,borderRadius:8,borderWidth:1},
+  badgeText: {fontSize:10,fontWeight:'700',fontFamily:MF},
+  cardMeta: {flexDirection:'row',flexWrap:'wrap',gap:2},
+  metaItem: {fontSize:12,color:g('0.45'),fontFamily:MR},
+  arrow: {fontSize:22,color:g('0.2'),paddingRight:14},
 });
