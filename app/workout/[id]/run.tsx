@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Alert, useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -459,6 +459,12 @@ export default function RunScreen() {
   const gymMovFontSize = movLen <= 12 ? 32 : movLen <= 20 ? 26 : 20;
   const showGps       = isMovingActivity(currentStep?.movement ?? '');
 
+  const { width, height } = useWindowDimensions();
+  // pleine largeur : "00:00" en Bebas Neue ≈ 2.75× la taille ; capé sur hauteur/7 pour SE
+  const timerFontSize = Math.min(Math.floor((width - 32) / 2.75), Math.floor(height / 7));
+  const hrFontSize    = Math.round(timerFontSize * 0.38);
+  const speedFontSize = Math.round(timerFontSize * 0.28);
+
   let mainTimer: number;
   let timerLabel: string;
   if (workout.format === 'intervals') {
@@ -725,66 +731,42 @@ export default function RunScreen() {
         </View>
       </View>
 
-      {/* Timer */}
+      {/* Chrono + cardio + vitesse */}
       <View style={s.timerSection}>
-        <Text style={s.timerLabel}>{timerLabel}</Text>
 
-        {showCircle ? (
-          <Svg width={C_SIZE} height={C_SIZE}>
-            <Circle
-              cx={C_CENTER} cy={C_CENTER} r={C_RADIUS}
-              stroke="#FFFFFF22" strokeWidth={10} fill="none"
-            />
-            <Circle
-              cx={C_CENTER} cy={C_CENTER} r={C_RADIUS}
-              stroke={arcColor} strokeWidth={10} fill="none"
-              strokeDasharray={[CIRCUMFERENCE, CIRCUMFERENCE]}
-              strokeDashoffset={circleOffset}
-              strokeLinecap="round"
-              transform={`rotate(-90, ${C_CENTER}, ${C_CENTER})`}
-            />
-            <SvgText
-              x={C_CENTER} y={C_CENTER}
-              textAnchor="middle" alignmentBaseline="central"
-              fill={timerColor}
-            >
-              <TSpan fontSize={36} fontWeight="700">
-                {String(Math.floor(Math.abs(mainTimer) / 60)).padStart(2, '0')}
-              </TSpan>
-              <TSpan fontSize={36} fontWeight="700">:</TSpan>
-              <TSpan fontSize={28} fontWeight="300">
-                {String(Math.abs(mainTimer) % 60).padStart(2, '0')}
-              </TSpan>
-            </SvgText>
-          </Svg>
-        ) : (
-          <Text style={s.timerRow}>
-            <Text style={[s.timerBold, { color: timerColor }]}>
-              {String(Math.floor(Math.abs(mainTimer) / 60)).padStart(2, '0')}
-            </Text>
-            <Text style={[s.timerBold, { color: timerColor }]}>:</Text>
-            <Text style={[s.timerLight, { color: timerColor }]}>
-              {String(Math.abs(mainTimer) % 60).padStart(2, '0')}
-            </Text>
+        {/* Chrono pleine largeur */}
+        <Text style={[s.timerDisplay, { fontSize: timerFontSize, lineHeight: Math.round(timerFontSize * 1.05), color: timerColor }]}>
+          {`${String(Math.floor(Math.abs(mainTimer) / 60)).padStart(2, '0')}:${String(Math.abs(mainTimer) % 60).padStart(2, '0')}`}
+        </Text>
+
+        {/* Fréquence cardiaque */}
+        <View style={s.hrRowBig}>
+          <Text style={[s.hrHeartBig, { fontSize: hrFontSize, lineHeight: Math.round(hrFontSize * 1.1) }]}>♥</Text>
+          <Text style={[s.hrValueBig, { fontSize: hrFontSize, lineHeight: Math.round(hrFontSize * 1.1) }]}>
+            {bpm !== null ? String(bpm) : '--'}
           </Text>
-        )}
+          <Text style={s.hrUnitBig}>bpm</Text>
+        </View>
 
-        {status === 'paused' && <Text style={s.pausedBadge}>PAUSED</Text>}
-
-        {/* GPS Speed compact — seulement pour activités de déplacement */}
+        {/* Vitesse GPS — slot toujours présent */}
         <View style={s.gpsSlot}>
           {showGps && gpsSpeed !== null && (
-            <View style={sGps.rowCompact}>
-              <Text style={sGps.speedCompact}>{gpsSpeed} km/h</Text>
-              <Text style={sGps.sepCompact}>·</Text>
-              <Text style={sGps.paceCompact}>{speedToPace(gpsSpeed)}</Text>
+            <View style={s.gpsRowBig}>
+              <Text style={[s.gpsSpeedBig, { fontSize: speedFontSize, lineHeight: Math.round(speedFontSize * 1.1), transform: [{ skewX: '-10deg' as any }] }]}>
+                {gpsSpeed}
+              </Text>
+              <Text style={s.gpsUnitBig}>km/h</Text>
+              <Text style={s.gpsSepBig}>·</Text>
+              <Text style={s.gpsPaceBig}>{speedToPace(gpsSpeed)}</Text>
             </View>
           )}
         </View>
-        {/* Fréquence cardiaque */}
-        <Text style={s.hrText}>♥  {bpm !== null ? `${bpm} bpm` : '-- bpm'}</Text>
 
-        <Text style={s.prevBlock}>{prevText}</Text>
+        {/* Infos bloc précédent + PAUSED */}
+        <View style={s.bottomSlot}>
+          {lastCompleted && <Text style={s.prevBlock}>{prevText}</Text>}
+          {status === 'paused' && <Text style={s.pausedBadge}>PAUSED</Text>}
+        </View>
       </View>
 
       {/* Progress bar */}
@@ -877,18 +859,44 @@ const s = StyleSheet.create({
   tag:             { backgroundColor: '#FFFFFF12', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   tagText:         { color: '#FFFFFFAA', fontSize: 14, fontWeight: '500', fontFamily: 'Inter_400Regular' },
 
-  timerSection: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  timerLabel:   { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 2, marginBottom: 4, fontFamily: 'Inter_700Bold' },
-
-  timerRow:   { flexDirection: 'row', alignItems: 'baseline' },
-  timerBold:  { fontSize: 72, fontWeight: '700', color: CREAM, lineHeight: 80, fontFamily: 'Inter_700Bold' },
-  timerLight: { fontSize: 72, fontWeight: '300', color: CREAM, lineHeight: 80, fontFamily: 'Inter_300Light' },
-
-  pausedBadge: { fontSize: 12, fontWeight: '700', color: PURPLE, letterSpacing: 3, marginTop: 6, fontFamily: 'Inter_700Bold' },
-  prevBlock:   { fontSize: 13, color: MUTED, fontWeight: '500', marginTop: 8, fontFamily: 'Inter_400Regular' },
-
-  gpsSlot:    { height: 36, justifyContent: 'center' as const, alignItems: 'center' as const },
+  // ── Compact timer section ──────────────────────────────────────────────────
+  timerSection: {
+    flex: 1, alignItems: 'center', justifyContent: 'space-evenly',
+    paddingHorizontal: 16, paddingVertical: 4,
+  },
+  timerDisplay: {
+    fontFamily: 'BebasNeue_400Regular',
+    fontVariant: ['tabular-nums'],
+    color: CREAM,
+    includeFontPadding: false,
+    textAlign: 'center',
+  },
+  hrRowBig: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hrHeartBig: {
+    fontFamily: 'BebasNeue_400Regular', color: '#E5484D',
+    includeFontPadding: false,
+  },
+  hrValueBig: {
+    fontFamily: 'BebasNeue_400Regular', color: CREAM,
+    includeFontPadding: false,
+  },
+  hrUnitBig: {
+    fontSize: 14, color: MUTED, fontFamily: 'Inter_400Regular',
+    alignSelf: 'flex-end', paddingBottom: 3,
+  },
+  gpsSlot:    { minHeight: 52, justifyContent: 'center' as const, alignItems: 'center' as const },
   gpsSlotGym: { height: 50, justifyContent: 'center' as const, alignItems: 'center' as const },
+  gpsRowBig: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  gpsSpeedBig: {
+    fontFamily: 'BebasNeue_400Regular', color: CREAM,
+    includeFontPadding: false,
+  },
+  gpsUnitBig:  { fontSize: 14, color: MUTED, fontFamily: 'Inter_400Regular' },
+  gpsSepBig:   { fontSize: 14, color: MUTED, marginHorizontal: 4 },
+  gpsPaceBig:  { fontSize: 16, color: PURPLE, fontFamily: 'Inter_700Bold', fontWeight: '700' },
+  bottomSlot:  { alignItems: 'center', minHeight: 32 },
+  pausedBadge: { fontSize: 12, fontWeight: '700', color: PURPLE, letterSpacing: 3, fontFamily: 'Inter_700Bold' },
+  prevBlock:   { fontSize: 13, color: MUTED, fontWeight: '500', fontFamily: 'Inter_400Regular' },
   hrText:     { fontSize: 16, fontWeight: '600', color: PURPLE, marginTop: 4, fontFamily: 'Inter_700Bold' },
   hrTextGym:  { fontSize: 22, fontWeight: '700', color: 'rgba(0,0,0,0.45)', marginTop: 4, fontFamily: 'Inter_700Bold' },
 
