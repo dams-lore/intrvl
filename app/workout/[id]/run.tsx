@@ -435,6 +435,10 @@ export default function RunScreen() {
   const currentStep = workout.steps[r.blockIndex];
   const isTimed     = currentStep?.type === 'time';
 
+  const movLen        = currentStep?.movement?.length ?? 0;
+  const movFontSize    = movLen <= 12 ? 44 : movLen <= 20 ? 34 : 26;
+  const gymMovFontSize = movLen <= 12 ? 32 : movLen <= 20 ? 26 : 20;
+
   let mainTimer: number;
   let timerLabel: string;
   if (workout.format === 'intervals') {
@@ -516,7 +520,7 @@ export default function RunScreen() {
 
         {/* Floating: Stop (gauche) · Round + modePill (droite) */}
         <View style={s.gymOverlayTop} pointerEvents="box-none">
-          <TouchableOpacity style={s.gymStopFloat} onPress={handleStop} activeOpacity={0.8} pointerEvents="auto">
+          <TouchableOpacity style={s.gymStopFloat} onPress={handleStop} activeOpacity={0.8}>
             <Text style={s.gymStopFloatText}>■  Stop</Text>
           </TouchableOpacity>
           <View style={s.gymOverlayRight} pointerEvents="auto">
@@ -554,7 +558,7 @@ export default function RunScreen() {
         {/* Block info */}
         <View style={s.gymBlockSection}>
           <Text style={s.gymBlockIndexLabel}>BLOCK {r.blockIndex + 1} / {totalBlocks}</Text>
-          <Text style={s.gymMovementText} numberOfLines={2} adjustsFontSizeToFit>
+          <Text style={[s.gymMovementText, { fontSize: gymMovFontSize }]} numberOfLines={2}>
             {currentStep?.movement}
           </Text>
           <View style={s.tagRow}>
@@ -659,7 +663,7 @@ export default function RunScreen() {
         <Text style={s.blockIndexLabel}>
           BLOCK {r.blockIndex + 1} / {totalBlocks}
         </Text>
-        <Text style={s.movementText} numberOfLines={2} adjustsFontSizeToFit>
+        <Text style={[s.movementText, { fontSize: movFontSize }]} numberOfLines={2}>
           {currentStep?.movement}
         </Text>
         <View style={s.tagRow}>
@@ -717,7 +721,7 @@ export default function RunScreen() {
             />
             <SvgText
               x={C_CENTER} y={C_CENTER}
-              textAnchor="middle" dominantBaseline="central"
+              textAnchor="middle" alignmentBaseline="central"
               fill={timerColor}
             >
               <TSpan fontSize={36} fontWeight="700">
@@ -838,14 +842,14 @@ const s = StyleSheet.create({
   modePillDivider:    { fontSize: 11, color: MUTED, marginHorizontal: 4 },
   modePillDividerGym: { color: 'rgba(0,0,0,0.25)' },
 
-  blockSection:    { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
+  blockSection:    { minHeight: 190, paddingHorizontal: 28, paddingTop: 24, paddingBottom: 8 },
   blockIndexLabel: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 2, marginBottom: 10, fontFamily: 'Inter_700Bold' },
   movementText:    { fontSize: 44, fontWeight: '800', color: CREAM, lineHeight: 52, marginBottom: 16, fontFamily: 'Inter_700Bold' },
   tagRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag:             { backgroundColor: '#FFFFFF12', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   tagText:         { color: '#FFFFFFAA', fontSize: 14, fontWeight: '500', fontFamily: 'Inter_400Regular' },
 
-  timerSection: { alignItems: 'center', paddingVertical: 4 },
+  timerSection: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   timerLabel:   { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 2, marginBottom: 4, fontFamily: 'Inter_700Bold' },
 
   timerRow:   { flexDirection: 'row', alignItems: 'baseline' },
@@ -931,7 +935,7 @@ const s = StyleSheet.create({
     letterSpacing: 3, marginTop: 10, fontFamily: 'Inter_700Bold',
   },
 
-  gymBlockSection: { paddingHorizontal: 28, paddingBottom: 4 },
+  gymBlockSection: { minHeight: 150, paddingHorizontal: 28, paddingBottom: 4 },
   gymBlockIndexLabel: {
     fontSize: 13, fontWeight: '700', color: 'rgba(0,0,0,0.5)',
     letterSpacing: 2, marginBottom: 8, fontFamily: 'Inter_700Bold',
@@ -1027,7 +1031,7 @@ const sA = StyleSheet.create({
 // ── Countdown styles (partagés compact + gym) ─────────────────────────────
 const sCD = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#E36DAC',
     zIndex: 99,
     alignItems: 'center',
