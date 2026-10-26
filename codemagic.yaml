@@ -1,0 +1,67 @@
+workflows:
+  ios-development-build:
+    name: intrvl — iOS Development Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: latest
+      xcode: latest
+      cocoapods: default
+      groups:
+        - expo_credentials   # EXPO_TOKEN
+        - apple_credentials  # APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_PRIVATE_KEY
+      vars:
+        BUNDLE_ID: com.damslore.intrvl
+        EAS_BUILD_PROFILE: development
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: master
+          include: true
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Set up EAS CLI
+        script: |
+          npm install -g eas-cli
+
+      - name: Expo prebuild (generate native iOS project)
+        script: |
+          npx expo prebuild --platform ios --clean --non-interactive
+
+      - name: Install CocoaPods
+        script: |
+          cd ios && pod install
+
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_ADHOC \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build iOS .ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace ios/interval-app-v2.xcworkspace \
+            --scheme interval-app-v2
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - damien.coquet@gmail.com
+        notify:
+          success: true
+          failure: true
