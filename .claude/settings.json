@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx expo install --check)",
+      "mcp__context7",
+      "mcp__notion__notion-search",
+      "mcp__notion__notion-fetch"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git push --force:*)",
+      "mcp__notion__notion-create-pages",
+      "mcp__notion__notion-update-page",
+      "mcp__notion__notion-move-pages",
+      "mcp__notion__notion-duplicate-page",
+      "mcp__notion__notion-create-database",
+      "mcp__notion__notion-update-database",
+      "mcp__notion__notion-create-comment"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}

@@ -40,3 +40,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Claude Code (réglages perso, non partagés)
+.claude/settings.local.json
+
+# Garmin Connect IQ (clé développeur, builds)
+*.der
+watch-garmin/bin/
+.claude/worktrees/jolly-banzai-870e53/
+.claude/worktrees/objective-easley-6b08d9/
+
+.claude/worktrees/
